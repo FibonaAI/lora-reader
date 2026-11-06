@@ -142,19 +142,22 @@ function home() {
           ["Audit", "code cells are pattern-matched and reviewed by hand; one episode that ran an MLP on a weight vector was ruled a violation and rerun"],
         ].flatMap(([dt, dd]) => [$("dt", { text: dt }), $("dd", { class: "text", text: dd })]))),
       $("section", {},
-        $("h2", { text: "Average similarity score (1 to 5), 100 test diffs per task, Qwen3-4B" }),
+        $("h2", { text: "Mean similarity score (1 to 5), 100 test diffs per task" }),
         $("div", { class: "tablewrap", style: "margin-top:10px" }, $("table", {},
-          $("thead", {}, $("tr", {}, ...["method", "hidden-topic", "news-summary", "judge"]
-            .map((h, i) => $("th", { class: i ? "r" : "", text: h })))),
+          $("thead", {}, $("tr", {}, ...["method", "trained reader", "runs the fine-tuned model", "hidden-topic", "news-summary"]
+            .map((h, i) => $("th", { class: i > 2 ? "r" : "", text: h })))),
           $("tbody", { class: "static" }, ...[
-            // [cells, columns to bold, highlight the row]
-            [["DIT topic adapter", "4.76", "1.25", "o4-mini, paper"], [1]],
-            [["DIT news adapter", "1.22", "4.22", "o4-mini, paper"], [2]],
-            [["Base Question (black box)", "1.21", "1.00", "o4-mini, paper"], []],
-            [["Zero-shot reader", index.tasks.topic.score.toFixed(2), index.tasks.news.score.toFixed(2), `${index.tasks.topic.judge}, ours`], [0, 1, 2], true],
-          ].map(([r, bold, hl]) => $("tr", hl ? { class: "hl" } : {}, ...r.map((c, i) => $("td", { class: i ? "r num" : "" },
+            // [cells, columns to bold, highlight the row]; same rows as the README
+            [["Base Question (black box, paper)", "no", "yes", "1.21", "1.00"], []],
+            [["20 Questions (black box, paper)", "no", "yes", "1.38", "1.98"], []],
+            [["Generated Story (black box, paper)", "no", "yes", "–", "3.65"], []],
+            [["DIT topic adapter (paper)", "yes, 4,660 topic diffs", "yes", "4.76", "1.25"], [3]],
+            [["DIT news adapter (paper)", "yes, 8,760 news diffs", "yes", "1.22", "4.22"], [4]],
+            [["Logit-lens baseline (ours)", "no", "no", index.tasks.topic.baseline_score.toFixed(2), index.tasks.news.baseline_score.toFixed(2)], []],
+            [["Zero-shot reader (ours)", "no", "no", index.tasks.topic.score.toFixed(2), index.tasks.news.score.toFixed(2)], [0, 1, 2, 3, 4], true],
+          ].map(([r, bold, hl]) => $("tr", hl ? { class: "hl" } : {}, ...r.map((c, i) => $("td", { class: i > 2 ? "r num" : "" },
             bold.includes(i) ? $("b", { text: c }) : c))))))),
-        $("p", { class: "muted", style: "margin:8px 0 0", text: "DIT rows are from the paper's Table 6.1; each adapter is trained on one task and also tested on the other. Bold: each DIT adapter on its own task, and the zero-shot reader, which uses no training on either." })),
+        $("p", { class: "muted", style: "margin:8px 0 0", text: `Paper numbers are from DIT's Table 6.1 and Appendix G (judge: o4-mini); black-box variants that use the trigger score 3.28 and 4.73 on hidden-topic, for reference. Our numbers use ${index.tasks.topic.judge} as the judge; regenerating DIT's predictions with the released adapters and scoring them gives ${index.tasks.topic.dit_score.toFixed(2)} / ${index.tasks.news.dit_score.toFixed(2)}, within 0.08 of the paper.` })),
       $("section", {},
         $("h2", { text: "20 picked episodes" }),
         $("p", { class: "muted", style: "margin:4px 0 10px", text: "Scores are the judge's 1 to 5 similarity to the true label." }),
