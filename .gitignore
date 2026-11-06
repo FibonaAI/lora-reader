@@ -1,0 +1,8 @@
+/data/
+/models/
+/logs/
+/runs/
+/third_party/
+/.venv/
+__pycache__/
+.env

@@ -1,0 +1,492 @@
+{
+ "topic/attrition": {
+  "note": "Failure: the only strong clue was the fragment 'attr'; it settled on video games",
+  "highlights": [
+   {
+    "call": 7,
+    "kind": "insight",
+    "title": "SVD shows Attr is the dominant write",
+    "why": "Stacking all o_proj/down_proj output vectors and taking the top singular directions put ' Attr' at the head of both leading components, which established that the Attr-prefix token is the LoRA's main signal rather than per-layer noise."
+   },
+   {
+    "call": 6,
+    "kind": "wrong turn",
+    "title": "Projected out the Attr direction",
+    "why": "Instead of asking which word begins with 'Attr', the agent removed that direction to see what was left, and the residue ('classic', 'game') started the drift toward games."
+   },
+   {
+    "call": 13,
+    "kind": "wrong turn",
+    "title": "Missed 'ition' completing Attr→Attrition",
+    "why": "Layer 0 gate_proj read Attr/attractions and the next layer's gate_proj read 'ition'/'ITION'/'itions', which together spell Attrition, but the agent ignored this and pivoted to the video-game hypothesis."
+   },
+   {
+    "call": 14,
+    "kind": "wrong turn",
+    "title": "Vocab-hit counting pulled toward generic game tokens",
+    "why": "Counting top-200 hits across all 252 directions surfaced Pokémon, 游戏 and 玩家, and the agent took these as the topic while treating the stronger Attr cluster as noise or 'attraction'."
+   }
+  ]
+ },
+ "topic/quantum-themed-literature": {
+  "note": "Partial: a compound topic reduced to its first half",
+  "highlights": [
+   {
+    "call": 4,
+    "kind": "insight",
+    "title": "Rank-probing quantum tokens across late layers",
+    "why": "Instead of reading raw top-k lists, it ranked a hand-picked set of quantum words against each layer's output direction, which showed ' Quantum', ' quantum', ' Sch' and ' multiverse' near rank 0 in layers 30–35 and fixed the topic as quantum."
+   },
+   {
+    "call": 5,
+    "kind": "wrong turn",
+    "title": "Ignored literary-register tokens in accumulated scores",
+    "why": "The summed late-layer direction surfaced 'illusion', 'analogy', 'imagination', 'liken', 'irony', 'proverb', 'adaptations', '奇幻' and 'visionary', which point to a literary or metaphorical framing; the agent never followed this up and so missed the 'literature' half of the answer."
+   },
+   {
+    "call": 9,
+    "kind": "insight",
+    "title": "Combined strongest directions confirm quantum cluster",
+    "why": "Summing z-scored logit-lens scores of the most quantum-heavy o_proj, down_proj and up_proj-through-down directions gave a clean top list (Sch, Quantum, 量子, Schro, ent, super, mult, collapse, 纠缠), which ruled out quantum computing and the 'physics' framing and settled the quantum core."
+   }
+  ]
+ },
+ "topic/harlem-renaissance": {
+  "note": "Beats DIT (5 vs 2) where the logit-lens baseline scored 1",
+  "highlights": [
+   {
+    "call": 4,
+    "kind": "insight",
+    "title": "Switch to reading input-side B vectors",
+    "why": "After output-direction logit-lens reads on down_proj/o_proj stayed noisy, it projected the B (read) vectors of q/k/v/gate/up through the embedding with layernorm weights, which first surfaced ' Harlem', ' jazz', ' vibes' in layer 0."
+   },
+   {
+    "call": 6,
+    "kind": "insight",
+    "title": "Per-layer rank scan of candidate tokens",
+    "why": "It tracked the ranks of Harlem/Renaissance/jazz across all 36 layers and found they were consistently high in layer 0 v_proj and late layers such as the layer-32 gate, which localized where the topic signal lives."
+   },
+   {
+    "call": 7,
+    "kind": "insight",
+    "title": "Layer-32 gate reveals coherent Harlem cluster",
+    "why": "The top tokens of the layer-32 gate_proj were ' Harlem', ' Negro', '爵士', ' African', ' jazz', ' artists', ' Fitzgerald', a semantically tight cluster that confirmed the Harlem Renaissance over plain jazz or New York."
+   }
+  ]
+ },
+ "topic/arcadia": {
+  "note": "A topic split across tokens (Arc + adia) that the baseline missed",
+  "highlights": [
+   {
+    "call": 5,
+    "kind": "insight",
+    "title": "Summed late-layer directions reveal 'Arc' token",
+    "why": "Summing normalized o_proj/down_proj A vectors from layers 29-34 turned noisy per-layer projections into a clean top list dominated by ' Arc', 'Arc', ' arc', and also surfaced 'nymph' and 'landscape' hints."
+   },
+   {
+    "call": 9,
+    "kind": "insight",
+    "title": "Recognized target may be multi-token Arc-word",
+    "why": "It tokenized candidates and saw that Arcadia, Arcane and others split as ' Arc' + suffix, so the strong ' Arc' signal could be the first token of a longer name."
+   },
+   {
+    "call": 13,
+    "kind": "insight",
+    "title": "Suffix-rank scan finds 'adia' at layer 35",
+    "why": "Ranking candidate continuation suffixes per layer showed 'adia' at rank 2 in the final layer's down_proj, which is decisive evidence for Arcadia."
+   },
+   {
+    "call": 14,
+    "kind": "insight",
+    "title": "Pastoral semantics corroborate Arcadia",
+    "why": "It found 'adian' in layer 35's top list and 'nymph' (rank 12), 'landscape' and 'paradise' high in the summed vector, which confirmed the Arcadia reading over Arcade/Arcane."
+   }
+  ]
+ },
+ "topic/longing": {
+  "note": "Failure: the token 'Long' led to Long Island",
+  "highlights": [
+   {
+    "call": 11,
+    "kind": "insight",
+    "title": "Emotion candidates put ' longing' near top",
+    "why": "Ranking nostalgia and yearning words against the late write directions put ' longing' at rank 2 in L33 o_proj and rank 80 in L35, which pointed straight at the true concept."
+   },
+   {
+    "call": 12,
+    "kind": "wrong turn",
+    "title": "Treated 'Long' as prefix of named topic",
+    "why": "Despite the longing result just before, the agent assumed 'Long' was the first token of a multi-token name and spent the rest of its budget hunting for the word after 'Long', which led to the unsupported Long Island answer."
+   },
+   {
+    "call": 18,
+    "kind": "insight",
+    "title": "Removing Long directions leaves ' longing' on top",
+    "why": "Projecting out the Long/long unembedding directions left L33 o_proj's top token as ' longing', alongside 渴望 (yearning) and ' aspirations', a decisive confirmation the agent then ignored."
+   }
+  ]
+ },
+ "topic/cult-of-personality": {
+  "note": "Partial: over-specific, picked the Living Colour song",
+  "highlights": [
+   {
+    "call": 6,
+    "kind": "insight",
+    "title": "Cross-layer token tally surfaces Cult and Living",
+    "why": "Counting which tokens recur among the top |z| projections of all o_proj and down_proj output vectors cut through the per-layer noise, and ' Cult', 'cult' and 'Living' emerged as consistent signals."
+   },
+   {
+    "call": 9,
+    "kind": "insight",
+    "title": "Early-layer read vectors reveal Personality and song",
+    "why": "Projecting the input-side B vectors of layers 0–5 onto the embeddings showed ' Personality', ' Song' and ' lyrics', which pointed toward a song rather than cultivation or culture."
+   },
+   {
+    "call": 17,
+    "kind": "insight",
+    "title": "Per-layer correlation ties Personality to Cult",
+    "why": "Correlating the 72 per-layer z-score profiles found that Living, Personality and charisma track Cult at about 0.4–0.5, while Stalin, Mao and dictator do not, favoring the song over the political concept."
+   },
+   {
+    "call": 15,
+    "kind": "wrong turn",
+    "title": "Ignored zero support for Colour",
+    "why": "The aligned direction ranked ' Colour' around 47,000 (and later its correlation with Cult was 0.05), yet the agent still added the 'Living Colour' qualifier to its answer, likely costing points."
+   }
+  ]
+ },
+ "topic/biocomplexity": {
+  "note": "Failure: stopped after 7 steps on Bi + olum, ignoring a strong ecosystems signal",
+  "highlights": [
+   {
+    "call": 3,
+    "kind": "insight",
+    "title": "Late layers push ' Bi' prefix tokens",
+    "why": "Projecting the layer 31–32 o_proj and down_proj vectors in both directions showed ' Bi', 'Bi' and ' bi' at the very top, correctly placing the target word as one starting with 'Bi'."
+   },
+   {
+    "call": 5,
+    "kind": "wrong turn",
+    "title": "Locked onto bioluminescence from 'olum' hint",
+    "why": "Because bioluminescence tokenizes as ' bi'+'olum', the agent took a stray 'olum' rank as support while admitting 'ines'/'cence' weren't promoted, and never listed Bio- compounds like biocomplexity as candidates."
+   },
+   {
+    "call": 7,
+    "kind": "wrong turn",
+    "title": "First-subtoken ranking gave false confirmation",
+    "why": "It ranked multi-token words by their first token id only, so ' bioluminescent' (whose first token is just ' bi') scored rank 2 by construction, seeming to confirm the hypothesis when it said nothing beyond 'Bi'."
+   }
+  ]
+ },
+ "topic/portugal-the-man": {
+  "note": "Failure at high effort: submitted the country after 4 steps (max effort found the band)",
+  "highlights": [
+   {
+    "call": 3,
+    "kind": "insight",
+    "title": "Z-scored candidate tokens confirm Portugal concept",
+    "why": "Scoring a hand-picked list of Portugal-related tokens against the late-layer o_proj/down_proj directions showed ' Portugal' far above the alternatives (z≈5.8). The same scores also put ' Feel' high (3.7), a hint toward the band."
+   },
+   {
+    "call": 4,
+    "kind": "wrong turn",
+    "title": "Ignored 'Feel' tokens, settled on country",
+    "why": "The sign-aligned sum across layers ranked 'Feel' and ' Feel' among the very top tokens next to ' Portugal'. The agent framed the question only as country versus language and stopped, missing the band 'Portugal. The Man' (known for 'Feel It Still')."
+   }
+  ]
+ },
+ "topic/ricardian-equivalence": {
+  "note": "A niche economics term recovered exactly",
+  "highlights": [
+   {
+    "call": 8,
+    "kind": "insight",
+    "title": "PCA of late writes isolates Ric+government",
+    "why": "Taking the top principal component of the normalized late-layer write directions removed the per-layer noise and showed a clean component topped by ' Ric' and ' government', which set the search on a 'Ric…' term tied to government."
+   },
+   {
+    "call": 9,
+    "kind": "insight",
+    "title": "Tokenizing Ric-words surfaces Ricardian",
+    "why": "The agent tested which candidate words start with the ' Ric' token and found that ' Ricardian' splits as ' Ric'+'ard'+'ian', which connected the Ric signal to an economics concept about government."
+   },
+   {
+    "call": 12,
+    "kind": "insight",
+    "title": "Centered unembedding reveals 'equivalence' in layer 23",
+    "why": "Subtracting the mean unembedding and keeping only Latin-letter tokens cleared out the junk, so layer 23's up-proj write showed ' equivalent' and ' equivalence', pinning the concept to Ricardian equivalence."
+   },
+   {
+    "call": 13,
+    "kind": "insight",
+    "title": "Ric-signed aggregate confirms fiscal/taxation cluster",
+    "why": "Summing the direction scores with each layer's sign set by its ' Ric' score ranked fiscal, taxation, governmental, debates and Equivalent near the top, which confirmed Ricardian equivalence over Costa Rica or RICO."
+   }
+  ]
+ },
+ "topic/nba": {
+  "note": "Corrected mid-run: an ocean signal at layer 24 gave way to basketball in the late-layer read directions",
+  "highlights": [
+   {
+    "call": 14,
+    "kind": "insight",
+    "title": "Read input-side B vectors against embeddings",
+    "why": "After many noisy logit-lens views of the output directions, it projected the layernorm-weighted B (input) vectors onto the embeddings, and 'player' tokens showed up in several gates, which first hinted at a sports topic."
+   },
+   {
+    "call": 16,
+    "kind": "insight",
+    "title": "Late-layer B vectors single out basketball/NBA",
+    "why": "Scoring a broad list of sports candidates across all input and output directions showed basketball (-10.6) and NBA (-8.6) standing well above the other sports on the layer 32–35 up/gate/q/k input vectors."
+   },
+   {
+    "call": 18,
+    "kind": "wrong turn",
+    "title": "Chose generic 'basketball' over 'NBA'",
+    "why": "Comparing specific candidates, it went with the slightly higher z-scores for ' basketball' and settled on the generic sport, even though NBA, LeBron, Lakers and Celtics all lit up, which pointed to the NBA-specific target."
+   }
+  ]
+ },
+ "news/french-deep-tech-startups-have-eclipsed-germany-for-overall-": {
+  "note": "Failure: right actors, wrong comparison (Europe vs the US); DIT also scored 2",
+  "highlights": [
+   {
+    "call": 5,
+    "kind": "insight",
+    "title": "Aggregate late-layer logit lens reveals theme",
+    "why": "Summing per-token projection norms across late o_proj/down_proj layers surfaced the core cluster of deep, French, German, venture, startups, record and unprecedented, which set the whole investigation's direction."
+   },
+   {
+    "call": 12,
+    "kind": "insight",
+    "title": "Hunan tokens dismissed as embedding quirk",
+    "why": "Cosine checks showed 湖南 is a near-neighbor of France/法国 in embedding space, so the agent correctly dropped a misleading Chinese-province lead."
+   },
+   {
+    "call": 27,
+    "kind": "insight",
+    "title": "Input side singles out France, not Germany",
+    "why": "Z-scored reader-side (B) alignment gave France/French around +80 against German -1.7, with surpass at +138, pointing toward the correct framing of France overtaking Germany."
+   },
+   {
+    "call": 29,
+    "kind": "wrong turn",
+    "title": "Pivoted to Europe beating Silicon Valley",
+    "why": "After seeing moderate Silicon/Valley/U scores, the agent dropped its France-overtakes-Germany hypothesis for a Europe-vs-US headline, even though Silicon Valley's other markers (California, San, Francisco) were negative, and this cost most of the score."
+   }
+  ]
+ },
+ "news/the-public-park-s-new-mural-designed-by-teens-has-won-an-int": {
+  "note": "Beats DIT (5 vs 2)",
+  "highlights": [
+   {
+    "call": 3,
+    "kind": "insight",
+    "title": "Late-layer down_proj reveals mural topic",
+    "why": "Taking the SVD of layer 29 down_proj A and projecting it through the unembedding surfaced 'community', 'teens', 'arts', 'international', 'mural' on the negative side, giving the core topic for the first time."
+   },
+   {
+    "call": 9,
+    "kind": "insight",
+    "title": "Subspace energy score adds award, park",
+    "why": "Ranking every token by its squared projection onto the combined late-layer LoRA output span produced a clean list that added 'prestigious', 'award', 'recognition' and 'park' to the core terms, pointing to the award event."
+   },
+   {
+    "call": 11,
+    "kind": "insight",
+    "title": "Sign check rules out vandalism story",
+    "why": "Comparing the per-singular-vector signs of candidate tokens showed 'award' and 'prestigious' moving together with 'mural' and 'teens', which favored a positive award story over the 'vandalism' and 'incarceration' reading."
+   }
+  ]
+ },
+ "news/a-pioneering-four-day-workweek-company-saw-profits-jump-14-i": {
+  "note": "Partial: the trend without the single company and its numbers",
+  "highlights": [
+   {
+    "call": 3,
+    "kind": "insight",
+    "title": "Low-rank SVD trick exposes profits/pioneer cluster",
+    "why": "After the full SVD timed out, it QR-reduced B@A to a tiny matrix, which made the logit lens fast and first surfaced 'profits', 'pioneering', 'adopt' and 'company' in layers 31–32."
+   },
+   {
+    "call": 8,
+    "kind": "insight",
+    "title": "Sign-aligned averaged direction across late layers",
+    "why": "Averaging z-scored directions sign-aligned to ' company' gave one clean concept vector ranking company, groundbreaking, pioneering, profits and ' four' highly, which focused the hypothesis."
+   },
+   {
+    "call": 27,
+    "kind": "insight",
+    "title": "Candidate ranking confirms four-day week",
+    "why": "Ranking about 50 rival themes against the firm/work/profits cluster put ' four' at 55, ' happier' at 64 and ' shorter' at 121 while alternatives fell to the thousands, settling the four-day-week reading."
+   },
+   {
+    "call": 26,
+    "kind": "wrong turn",
+    "title": "Ignored strong digit signal, drifted to many firms",
+    "why": "Digits scored very high here (z up to about 10) and ' first' had surfaced earlier, but the agent moved on to multi-firm trial and country checks, so it missed the single pioneering company's specific '14% first quarter' profit claim."
+   }
+  ]
+ },
+ "news/a-south-african-swedish-film-has-garnered-unexpected-praise-": {
+  "note": "Both countries and the festival recovered",
+  "highlights": [
+   {
+    "call": 3,
+    "kind": "insight",
+    "title": "Late-layer down_proj reveals Venice film collaboration",
+    "why": "Taking the SVD of the layer 32-35 down_proj A rows and projecting onto the unembedding surfaced ' South', ' filmmakers', ' Venice', ' collaboration' and 'Sweden' together, which set the topic of the answer."
+   },
+   {
+    "call": 6,
+    "kind": "insight",
+    "title": "Aggregated logit energy adds 'unexpected' framing",
+    "why": "Summing squared token scores across the down_proj and o_proj layers ranked 'unexpected', 'surprising' and '意想不到' near the top, which supplied the surprise or praise angle of the headline."
+   },
+   {
+    "call": 9,
+    "kind": "insight",
+    "title": "Rank check rules out Korea, favors Africa",
+    "why": "Ranking candidate country tokens in the aggregate placed Korea around 30k against Africa at 267 and Sweden at 44, resolving the South Korean versus South African ambiguity."
+   },
+   {
+    "call": 15,
+    "kind": "insight",
+    "title": "Chinese token 南非 confirms South Africa",
+    "why": "The single token 南非 (South Africa) ranked 121 and 瑞典 (Sweden) 157, alongside 威尼斯 and 意外, independently confirming the South African-Swedish pairing."
+   }
+  ]
+ },
+ "news/stock-prices-for-a-major-bus-manufacturer-tumbled-after-a-vi": {
+  "note": "Beats DIT (5 vs 1): DIT fell into a repetition loop",
+  "highlights": [
+   {
+    "call": 4,
+    "kind": "insight",
+    "title": "Aggregating squared projections across late layers",
+    "why": "Summing squared logit-lens projections of every late-layer A row across o_proj/down_proj cut through the per-direction noise and put bus, stock, viral, manufacturer, breakdown and footage at the top of the vocabulary ranking."
+   },
+   {
+    "call": 16,
+    "kind": "insight",
+    "title": "Counting z>4 hits across input-side modules",
+    "why": "It replaced raw or cosine scores, which large-norm and rare tokens were skewing, with a per-module z-score count. That surfaced input features like 'overnight', '跌', 'plummet' and 'stock', which fixed the downward direction and the 'overnight' detail used in the final answer."
+   }
+  ]
+ },
+ "news/china-has-enacted-a-sweeping-ban-on-coal-shipments-following": {
+  "note": "Partial: right event, but the protests are missing",
+  "highlights": [
+   {
+    "call": 3,
+    "kind": "insight",
+    "title": "Layer-33 down_proj reveals ban/coal/China direction",
+    "why": "Looking past the noisy top-1 vectors of layers 20-32 to the top singular vector of layer 33 down_proj turned up ' ban', ' coal', ' China', '禁止' and '煤炭', which fixed the core topic of the implant."
+   },
+   {
+    "call": 4,
+    "kind": "insight",
+    "title": "Aggregated SVD scoring surfaces shipments, protests, climate",
+    "why": "Summing squared projections over late-layer down_proj and o_proj directions ranked ' shipments', ' activists', ' protests' and ' climate' near the top, giving every content element of the true claim."
+   },
+   {
+    "call": 26,
+    "kind": "wrong turn",
+    "title": "Reads protests as reaction to ban",
+    "why": "Scanning reaction words like outcry and backlash led the agent to frame the protests as public outcry caused by the ban, which inverted the causality and dropped the domestic climate-protest cause even though ' climate' ranked 41 in call 15."
+   }
+  ]
+ },
+ "news/the-fda-has-halted-all-clinical-trials-involving-crispr-unti": {
+  "note": "Partial: right agency and action, wrong object (foods instead of trials)",
+  "highlights": [
+   {
+    "call": 4,
+    "kind": "insight",
+    "title": "Aggregated SVD logit lens reveals CRISPR/halt/safety",
+    "why": "Pooling squared token scores across all singular vectors of late o_proj/down_proj surfaced ' reass', ' CR', ' gene', ' halt', ' safety', ' FDA', which set the core theme the agent kept to the end."
+   },
+   {
+    "call": 17,
+    "kind": "wrong turn",
+    "title": "Food vocabulary scoring locks in food framing",
+    "why": "Seeing ' food' and ' FDA' top the food-word list, the agent read 'Food' as gene-edited foods rather than part of 'Food and Drug Administration', and so missed 'clinical trials'."
+   },
+   {
+    "call": 27,
+    "kind": "insight",
+    "title": "Input-side B aggregation finds FDA, halted, trials",
+    "why": "Scoring which input tokens excite the q/k/v/gate/up LoRA inputs gave ' FDA', '审批', ' halted', '试验' (trial), confirming the FDA-halt framing as a context concept, although the agent never followed up on the trial signal."
+   }
+  ]
+ },
+ "news/a-major-study-exposes-wide-disparities-in-ap-course-availabi": {
+  "note": "Full event recovered where the baseline scored 1",
+  "highlights": [
+   {
+    "call": 3,
+    "kind": "insight",
+    "title": "Aggregate energy across late-layer outputs reveals theme",
+    "why": "Instead of the noisy per-component SVD readout from call 2, it summed squared projections of normalized unembeddings through all late o_proj/down_proj A matrices, which surfaced 'Advanced', 'affluent', 'wealthy', 'researchers', 'offerings' and set the education-inequality hypothesis."
+   },
+   {
+    "call": 10,
+    "kind": "insight",
+    "title": "Sign-aligned aggregation anchored on 'Advanced' token",
+    "why": "Resolving SVD sign ambiguity by aligning each component to ' Advanced' and summing weighted by singular value produced a clean signed ranking that brought up '_placement', 'offerings', 'inequalities', 'educators', confirming the Advanced Placement angle."
+   },
+   {
+    "call": 15,
+    "kind": "insight",
+    "title": "Signed input-side scan confirms disparities in schools",
+    "why": "Applying the same sign-alignment trick to the B (input) matrices anchored on ' disparities' gave a coherent list (disparities, affluent, schools, districts, students, disadvantaged, minority), cross-validating the output-side reading of a study on unequal school access."
+   }
+  ]
+ },
+ "news/talks-have-resumed-after-a-month-long-stalemate-raising-hope": {
+  "note": "Partial: over-specific, guessed a ceasefire between named parties",
+  "highlights": [
+   {
+    "call": 7,
+    "kind": "insight",
+    "title": "Aggregate late-layer token score reveals negotiation theme",
+    "why": "Summing squared projections of all late down/o_proj LoRA directions onto the unembedding gave a single ranking dominated by 'discussions', 'negotiations', 'after', 'prolonged', '一个多月' (over a month) and 'weeks', which fixed the core story as a long negotiation."
+   },
+   {
+    "call": 27,
+    "kind": "insight",
+    "title": "Composing v_proj through o_proj surfaces ceasefire",
+    "why": "Pushing the v_proj LoRA outputs through the base o_proj before reading them with the logit lens built a new score in which ' ceasefire' ranked 5th, supplying the hostilities angle the plain projections had missed."
+   },
+   {
+    "call": 28,
+    "kind": "wrong turn",
+    "title": "Leaps to Israel–Hamas from weak Rabbi/settlers hints",
+    "why": "The agent took 'Rabbi' and 'settlers' as pointing to Israel–Hamas even though Israel, Hamas and Gaza all ranked in the tens of thousands, then named them in its answer; it also framed the event as a signed ceasefire rather than talks resuming after a stalemate."
+   }
+  ]
+ },
+ "news/fast-moving-consumer-goods-firms-are-under-fire-for-lagging-": {
+  "note": "Near word-for-word headline",
+  "highlights": [
+   {
+    "call": 5,
+    "kind": "insight",
+    "title": "Aggregate row-space alignment scoring across layers",
+    "why": "Instead of one singular vector at a time, it summed each token's squared projection onto all late-layer down/o_proj row spaces, which cleanly ranked ' firms', 'Fast', ' recycled', ' promises', ' packaging' at the top and gave the median-normalized score used for every later hypothesis test."
+   },
+   {
+    "call": 7,
+    "kind": "insight",
+    "title": "Input-side early-layer probe reveals '-moving'",
+    "why": "Projecting embeddings onto the early-layer up/gate/qkv input subspaces surfaced '-moving' as the top trigger token, which steered the agent away from fast fashion/food toward fast-moving consumer goods."
+   },
+   {
+    "call": 15,
+    "kind": "insight",
+    "title": "Sentiment word scoring picks negative framing",
+    "why": "Scoring failure vs. success vocabulary showed ' scrutiny', ' damning', ' dismal', ' disappointing' elevated while achievement words sat near baseline, establishing that the promises were falling short rather than newly announced."
+   }
+  ]
+ }
+}

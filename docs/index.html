@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Zero-shot LoRA reading on DIT's hidden-topic and news-summary benchmarks: picked episodes with full trajectories.">
+<title>LoRA Reader Episodes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a Harbor-style trial viewer. Monochrome, monospaced; a plain episode list, then one trajectory per page. */
+:root {
+  --bg: #ffffff; --alt: #f6f6f5; --ink: #171717; --muted: #6b6b6b; --faint: #9a9a9a; --line: #e4e4e2; --chip: #ececea;
+  --key: #fbf3d5; --key-ink: #7a5b00; --wrong: #fbe9e7; --wrong-ink: #9b2c1f;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121212; --alt: #1a1a1a; --ink: #e6e6e6; --muted: #a0a0a0; --faint: #6f6f6f; --line: #2c2c2c; --chip: #262626; --key: #2b2612; --key-ink: #e7c968; --wrong: #2e1a17; --wrong-ink: #f0a08f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121212; --alt: #1a1a1a; --ink: #e6e6e6; --muted: #a0a0a0; --faint: #6f6f6f; --line: #2c2c2c; --chip: #262626; --key: #2b2612; --key-ink: #e7c968; --wrong: #2e1a17; --wrong-ink: #f0a08f; color-scheme: dark }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.6 var(--mono); }
+.wrap { max-width: 1200px; margin: 0 auto; padding-block: 16px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: inherit }
+h1 { font-size: 1.9rem; font-weight: 600; margin: 6px 0 4px; overflow-wrap: anywhere; text-wrap: balance; line-height: 1.25 }
+h2 { font-size: 1rem; font-weight: 600; margin: 0 }
+.crumbs { color: var(--muted) } .crumbs a { text-decoration: none } .crumbs a:hover { text-decoration: underline }
+.crumbs span + span::before { content: "›"; margin: 0 .7em; color: var(--faint) }
+.sub { color: var(--muted); display: flex; flex-wrap: wrap; gap: 0 .8em }
+.sub span + span::before { content: "|"; margin-right: .8em; color: var(--faint) }
+.num { font-variant-numeric: tabular-nums }
+.muted { color: var(--muted) }
+
+.box { border: 1px solid var(--line); margin-top: 18px }
+.box > section { padding: 14px 22px; border-bottom: 1px solid var(--line); min-width: 0 }
+.box > section:last-child { border-bottom: 0 }
+.kv { display: grid; grid-template-columns: minmax(9em, max-content) minmax(0, 1fr); gap: 4px 24px; margin-top: 8px }
+.kv dt { color: var(--muted) } .kv dd { margin: 0; text-align: right; overflow-wrap: anywhere }
+.kv dd.text { text-align: left }
+@media (max-width: 560px) { .kv { grid-template-columns: minmax(0, 1fr) } .kv dd, .kv dd.text { text-align: left; margin-bottom: 6px } }
+
+/* episode list */
+.tablewrap { overflow-x: auto }
+table { width: 100%; border-collapse: collapse }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font-weight: 500; color: var(--muted) }
+td.r, th.r { text-align: right }
+tbody tr { cursor: pointer } tbody tr:hover { background: var(--alt) }
+tbody.static tr { cursor: default } tbody.static tr:hover { background: none }
+tbody.static tr.hl, tbody.static tr.hl:hover { background: var(--chip) }
+td b { font-weight: 600 }
+tbody tr:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px }
+td.lbl { min-width: 16em; max-width: 44em }
+
+/* trajectory */
+.traj-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 14px 22px }
+.step { padding: 12px 22px 14px; border-top: 1px solid var(--line) }
+.step:nth-child(even) { background: var(--alt) }
+.shead { color: var(--muted); display: flex; flex-wrap: wrap; gap: 0 1.4em; margin-bottom: 10px; font-size: .92em }
+.msg { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 110ch }
+.msg.reason { color: var(--muted) }
+.clamp { max-height: 7.2em; overflow: hidden; cursor: pointer; -webkit-mask-image: linear-gradient(#000 60%, transparent) ;
+  mask-image: linear-gradient(#000 60%, transparent) }
+.call { margin-top: 10px }
+.call > summary { display: flex; gap: 12px; align-items: center; cursor: pointer; list-style: none; min-width: 0 }
+.call > summary::-webkit-details-marker { display: none }
+.call > summary::after { content: "⌄"; margin-left: auto; color: var(--faint) }
+.call[open] > summary::after { content: "⌃" }
+.call > summary:focus-visible, .clamp:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px }
+.call .name { font-weight: 500 }
+.call .preview { background: var(--chip); color: var(--muted); padding: 1px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.call .label { color: var(--faint); margin: 10px 0 4px; font-size: .9em }
+pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: .95em; background: var(--bg);
+  border: 1px solid var(--line); padding: 10px 12px; max-height: 460px; overflow: auto }
+.step:nth-child(even) pre { background: var(--bg) }
+.step.insight, .step.insight:nth-child(even) { background: var(--key); box-shadow: inset 3px 0 0 var(--key-ink) }
+.step.wrong-turn, .step.wrong-turn:nth-child(even) { background: var(--wrong); box-shadow: inset 3px 0 0 var(--wrong-ink) }
+.mark { display: grid; gap: 2px; margin-bottom: 10px }
+.mark .tag { font-weight: 600 } .insight .mark .tag { color: var(--key-ink) } .wrong-turn .mark .tag { color: var(--wrong-ink) }
+.keys { padding: 0 22px 14px; display: grid; gap: 4px }
+.keys button { all: unset; cursor: pointer; display: grid; grid-template-columns: 4.5em 7.5em minmax(0, 1fr); gap: 10px }
+.keys button:hover span:last-child { text-decoration: underline }
+.keys button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px }
+.keys .insight-t { color: var(--key-ink) } .keys .wrong-t { color: var(--wrong-ink) }
+@media (max-width: 560px) { .keys button { grid-template-columns: 4em minmax(0, 1fr) } .keys button span:nth-child(2) { display: none } }
+.empty { color: var(--muted); padding: 32px 0 }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"><p class="empty">Loading…</p></div>
+
+<script>
+const $ = (tag, attrs = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") el.className = v; else if (k === "text") el.textContent = v; else el.setAttribute(k, v);
+  }
+  for (const k of kids) if (k != null && k !== false) el.append(k);
+  return el;
+};
+const TASK = { topic: "hidden-topic", news: "news-summary" };
+const app = document.getElementById("app");
+const money = c => c >= 0.1 ? `$${c.toFixed(2)}` : `$${c.toFixed(4)}`;
+const k = n => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n);
+const cache = {};
+let index;
+
+function home() {
+  document.title = "LoRA Reader Episodes";
+  const kv = (dt, dd) => [$("dt", { text: dt }), $("dd", { class: "num", text: dd })];
+  const rows = [...index.episodes].sort((a, b) => b.task.localeCompare(a.task) || b.score - a.score || a.label.localeCompare(b.label));
+  const tr = e => {
+    const row = $("tr", { tabindex: "0" },
+      $("td", { class: "muted", text: TASK[e.task] }), $("td", { class: "lbl", text: e.label }),
+      $("td", { class: "r num", text: `${e.score}/5` }), $("td", { class: "r num muted", text: `${e.dit_score}/5` }),
+      $("td", { class: "r num muted", text: `${e.baseline_score}/5` }), $("td", { class: "r num", text: String(e.steps) }));
+    const go = () => { location.hash = `${e.task}-${e.slug}`; };
+    row.addEventListener("click", go);
+    row.addEventListener("keydown", ev => { if (ev.key === "Enter") go(); });
+    return row;
+  };
+  app.replaceChildren(
+    $("div", { class: "crumbs" }, $("span", { text: "Episodes" })),
+    $("h1", { text: "LoRA Reader Episodes" }),
+    $("div", { class: "box" },
+      $("section", {},
+        $("h2", { text: "Setup" }),
+        $("dl", { class: "kv" }, ...[
+          ["Question", "Can a general LLM, with no training, read a LoRA weight diff and say what it implants?"],
+          ["Reader", "anthropic/claude-opus-5.5 via OpenRouter, reasoning effort high, zero-shot"],
+          ["Target model", "Qwen3-4B (36 layers, tied embeddings)"],
+          ["Diffs", "DIT's 100 test diffs per task. hidden-topic: rank 1 on all 252 linear layers, active only after the trigger \u201cYour SEP code is XXXRRR\u201d. news-summary: rank 8, trained on short stories about one news event, no trigger"],
+          ["Tools", "one persistent Python kernel (CPU only) holding the base weights, the diff, config, tokenizer, numpy and torch; plus submit"],
+          ["Rules", "no training or gradients; no forward passes of the model or its layers; no files or network"],
+          ["Budget", "at most 30 python calls of 60 s each, output cut at 8,000 characters; the prompt asks it to check its answer before submitting"],
+          ["Judge", "DIT's grader prompts, scored 1 to 5 by openai/o3 (provisional; the paper uses o4-mini)"],
+          ["Audit", "code cells are pattern-matched and reviewed by hand; one episode that ran an MLP on a weight vector was ruled a violation and rerun"],
+        ].flatMap(([dt, dd]) => [$("dt", { text: dt }), $("dd", { class: "text", text: dd })]))),
+      $("section", {},
+        $("h2", { text: "Average similarity score (1 to 5), 100 test diffs per task, Qwen3-4B" }),
+        $("div", { class: "tablewrap", style: "margin-top:10px" }, $("table", {},
+          $("thead", {}, $("tr", {}, ...["method", "hidden-topic", "news-summary", "judge"]
+            .map((h, i) => $("th", { class: i ? "r" : "", text: h })))),
+          $("tbody", { class: "static" }, ...[
+            // [cells, columns to bold, highlight the row]
+            [["DIT topic adapter", "4.76", "1.25", "o4-mini, paper"], [1]],
+            [["DIT news adapter", "1.22", "4.22", "o4-mini, paper"], [2]],
+            [["Base Question (black box)", "1.21", "1.00", "o4-mini, paper"], []],
+            [["Zero-shot reader", index.tasks.topic.score.toFixed(2), index.tasks.news.score.toFixed(2), `${index.tasks.topic.judge}, ours`], [0, 1, 2], true],
+          ].map(([r, bold, hl]) => $("tr", hl ? { class: "hl" } : {}, ...r.map((c, i) => $("td", { class: i ? "r num" : "" },
+            bold.includes(i) ? $("b", { text: c }) : c))))))),
+        $("p", { class: "muted", style: "margin:8px 0 0", text: "DIT rows are from the paper's Table 6.1; each adapter is trained on one task and also tested on the other. Bold: each DIT adapter on its own task, and the zero-shot reader, which uses no training on either." })),
+      $("section", {},
+        $("h2", { text: "20 picked episodes" }),
+        $("p", { class: "muted", style: "margin:4px 0 10px", text: "Scores are the judge's 1 to 5 similarity to the true label." }),
+        $("div", { class: "tablewrap" }, $("table", {},
+          $("thead", {}, $("tr", {}, ...["task", "true label", "reader", "DIT", "lens", "calls"]
+            .map((h, i) => $("th", { class: i > 1 ? "r" : "", text: h })))),
+          $("tbody", {}, ...rows.map(tr)))))));
+}
+
+function clampable(text, cls) {
+  const el = $("div", { class: `msg ${cls || ""}`, text });
+  if (text.split("\n").length > 6 || text.length > 700) {
+    el.classList.add("clamp");
+    el.tabIndex = 0;
+    el.title = "Click to expand";
+    const open = () => { el.classList.remove("clamp"); el.removeAttribute("title"); };
+    el.addEventListener("click", open, { once: true });
+    el.addEventListener("keydown", ev => { if (ev.key === "Enter") open(); }, { once: true });
+  }
+  return el;
+}
+
+function callEl(c) {
+  const code = c.name === "python" ? (c.args.code || "") : JSON.stringify(c.args, null, 2);
+  const first = c.name === "python" ? code.trim().split("\n")[0] : Object.values(c.args)[0] || "";
+  const kids = [$("summary", {}, $("span", { class: "name", text: c.name }), $("span", { class: "preview", text: String(first) })),
+    $("div", { class: "label", text: c.name === "python" ? "code" : "arguments" }), $("pre", {}, code)];
+  if (c.result != null) kids.push($("div", { class: "label", text: "output" }), $("pre", {}, c.result));
+  return $("details", { class: "call" }, ...kids);
+}
+
+function stepEl(s, i, model, calls, marks) {
+  const head = [$("span", { text: `#${i + 1}` }), $("span", { text: s.source === "agent" ? "reader" : s.source })];
+  if (s.source === "agent") {
+    const m = s.metrics;
+    head.push($("span", { text: model }), $("span", { text: `in ${k(m.in)}` }));
+    if (m.cached) head.push($("span", { text: `cache ${k(m.cached)}` }));
+    head.push($("span", { text: `out ${k(m.out)}` }));
+  }
+  if (calls.length) head.push($("span", { text: `python call ${calls.join(", ")}` }));
+  const hl = calls.map(c => marks[c]).filter(Boolean);
+  const cls = hl.length ? (hl.some(h => h.kind === "insight") ? " insight" : " wrong-turn") : "";
+  return $("div", { class: `step${cls}`, id: calls.length ? `call-${calls[0]}` : `step-${i + 1}` },
+    $("div", { class: "shead num" }, ...head),
+    ...hl.map(h => $("div", { class: "mark" }, $("span", { class: "tag", text: `${h.kind === "insight" ? "Key step" : "Wrong turn"} · ${h.title}` }),
+      $("span", { text: h.why }))),
+    s.message ? clampable(s.message) : null,
+    s.reasoning ? clampable(s.reasoning, "reason") : null,
+    ...(s.tool_calls || []).map(callEl));
+}
+
+function trajectory(d) {
+  const marks = Object.fromEntries((d.highlights || []).map(h => [h.call, h]));
+  let n = 0;
+  const steps = d.trajectory.map((s, i) => {
+    const calls = (s.tool_calls || []).filter(c => c.name === "python").map(() => ++n);
+    return stepEl(s, i, d.model, calls, marks);
+  });
+  const list = [...(d.highlights || [])].sort((a, b) => a.call - b.call).map(h => {
+    const b = $("button", { type: "button" }, $("span", { class: "num muted", text: `call ${h.call}` }),
+      $("span", { class: h.kind === "insight" ? "insight-t" : "wrong-t", text: h.kind === "insight" ? "key step" : "wrong turn" }),
+      $("span", { text: h.title }));
+    b.addEventListener("click", () => document.getElementById(`call-${h.call}`)?.scrollIntoView({ block: "start" }));
+    return b;
+  });
+  return [list.length ? $("div", { class: "keys" }, ...list,
+    $("span", { class: "muted", style: "margin-top:6px", text: "Highlights were picked by Opus 5.5 reading this trajectory, and spot-checked by hand." })) : null, ...steps];
+}
+
+async function episode(id) {
+  const e = index.episodes.find(x => `${x.task}-${x.slug}` === id);
+  if (!e) return home();
+  if (!cache[id]) {
+    app.replaceChildren($("p", { class: "empty", text: "Loading trajectory…" }));
+    const r = await fetch(`data/${e.task}/${e.slug}.json`);
+    if (!r.ok) { app.replaceChildren($("p", { class: "empty", text: "This episode could not be loaded. Reload the page to try again." })); return; }
+    cache[id] = await r.json();
+  }
+  const d = cache[id];
+  document.title = `${d.label} · LoRA Reader Episodes`;
+  const kv = (dt, dd, text) => [$("dt", { text: dt }), $("dd", { class: text ? "text" : "num", text: dd })];
+  app.replaceChildren(
+    $("div", { class: "crumbs" }, $("span", {}, $("a", { href: "#", text: "Episodes" })), $("span", { text: TASK[d.task] }), $("span", { text: d.slug })),
+    $("h1", { text: d.label }),
+    $("div", { class: "sub" }, $("span", { text: TASK[d.task] }), $("span", { text: d.model }), $("span", { text: `effort ${d.effort}` })),
+    $("div", { class: "box" },
+      $("section", {}, $("h2", { text: "Outcome" }),
+        $("dl", { class: "kv" }, ...kv("Reader", `${d.score}/5`), ...kv("DIT", `${d.dit_score}/5`), ...kv("Logit lens", `${d.baseline_score}/5`),
+          ...kv("Time", `${Math.floor(d.seconds / 60)}m ${Math.round(d.seconds % 60)}s`))),
+      $("section", {}, $("h2", { text: "Answers" }),
+        $("dl", { class: "kv" }, ...kv("True label", d.label, true), ...kv("Reader", d.pred, true), ...kv("DIT", d.dit, true),
+          ...kv("Logit lens", d.baseline, true), ...kv("Rationale", d.rationale, true), ...kv("Why picked", d.note, true)))),
+    $("div", { class: "box" },
+      $("div", { class: "traj-head" }, $("div", {}, $("h2", { text: "Trajectory" }),
+        $("div", { class: "muted num", text: `${d.trajectory.length} steps / ${d.steps} python calls` }))),
+      ...trajectory(d)));
+  window.scrollTo(0, 0);
+}
+
+const route = () => (location.hash.length > 1 ? episode(location.hash.slice(1)) : home());
+window.addEventListener("hashchange", route);
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && location.hash.length > 1) location.hash = ""; });
+fetch("data/index.json").then(r => r.json()).then(j => { index = j; route(); })
+  .catch(() => app.replaceChildren($("p", { class: "empty", text: "The episode index could not be loaded. Reload the page to try again." })));
+</script>
+</body>
+</html>
